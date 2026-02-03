@@ -16,14 +16,6 @@
       --shadow: 0 12px 40px rgba(0,0,0,0.18);
     }
 
-    #app,
-    #no-boundary {
-      visibility: hidden;
-      opacity: 0;
-      pointer-events: none; /* prevent interaction until ready */
-      transition: opacity 160ms ease, visibility 0ms linear 160ms;
-    }
-
     #confetti{
       position: fixed;
       inset: 0;
@@ -96,10 +88,30 @@
       margin-top: 12px;
     }
 
-    /* NEW: invisible fixed container that bounds the #no button movement *
+    /* NEW: invisible fixed container that bounds the #no button movement */
+    #no-boundary{
+      position: fixed;
+      inset: 0;                 /* full viewport */
+      padding: 20px;           /* internal padding - button won't go into padding */
+      pointer-events: none;    /* disabled until script reveals it */
+      z-index: 10000;
 
-    /* #no is now absolutely positioned INSIDE the fixed boundary.
-       pointer-events:auto so the button is clickable even though the boundary is not. */
+      /* start hidden until script positions + reveals whole UI at once */
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 160ms ease, visibility 0ms linear 160ms;
+    }
+
+    /* initial hidden state for the main card to show everything together */
+    #app {
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, visibility 0ms linear 160ms;
+    }
+
+    /* #no is absolutely positioned INSIDE the fixed boundary.
+       pointer-events:auto when revealed by script. */
     #no{
       position: absolute;
       box-sizing: border-box;
@@ -110,10 +122,10 @@
       padding: 12px 22px;
       z-index: 10001;
       cursor: pointer;
-      pointer-events: none;     /* disabled until script reveals it */
-      visibility: hidden;       /* hidden until positioned */
+      pointer-events: none;     /* disabled until revealed by script */
+      visibility: hidden;       /* hidden until script reveals it */
       opacity: 0;
-      transition: opacity 0.12s ease, transform 0.12s ease;
+      transition: opacity 120ms ease, transform 120ms ease;
 
       /* smaller max-width to help small screens */
       max-width: min(260px, 70vw);
@@ -199,7 +211,6 @@
     <h2 id="q">Czy chcesz zostać moją walentynką? 💖</h2>
 
     <div class="buttons" id="buttonsArea">
-      <!-- YES stays inside buttons -->
       <button id="yes">Tak</button>
     </div>
 
@@ -225,7 +236,7 @@
   </div>
 
   <script>
-  // ===== Confetti без библиотек =====
+  // ===== Confetti без bibliotek =====
   const canvas = document.getElementById("confetti");
   const ctx = canvas.getContext("2d");
 
@@ -304,7 +315,7 @@
     running = true;
     loop();
 
-    // stop po 3.5 sekundy
+    // stop po 15 sekund
     setTimeout(() => {
       running = false;
       ctx.clearRect(0,0,canvas.width,canvas.height);
