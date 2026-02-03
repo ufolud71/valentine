@@ -16,6 +16,15 @@
       --shadow: 0 12px 40px rgba(0,0,0,0.18);
     }
 
+    #confetti{
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    
     body{
       margin:0;
       min-height:100vh;
@@ -164,6 +173,7 @@
 </head>
 
 <body onload="brython()">
+  <canvas id="confetti"></canvas>
   <div class="hearts"></div>
 
   <!-- EKRAN 1: pytanie -->
@@ -191,6 +201,93 @@
     <p class="final-sub" id="finalText">Kocham Cię ❤️</p>
   </div>
 
+  <script>
+  // ===== Confetti без bibliotek =====
+  const canvas = document.getElementById("confetti");
+  const ctx = canvas.getContext("2d");
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  let pieces = [];
+  let running = false;
+
+  function rand(min, max){ return Math.random() * (max - min) + min; }
+
+  function make(count=220){
+    pieces = [];
+    for(let i=0;i<count;i++){
+      pieces.push({
+        x: rand(0, canvas.width),
+        y: rand(-canvas.height, 0),
+        w: rand(6, 12),
+        h: rand(6, 12),
+        vx: rand(-3, 3),
+        vy: rand(3, 8),
+        rot: rand(0, Math.PI * 2),
+        vr: rand(-0.2, 0.2),
+        color: `hsl(${Math.floor(rand(0,360))} 90% 60%)`,
+        shape: Math.random() < 0.5 ? "rect" : "circle"
+      });
+    }
+  }
+
+  function step(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    for(const p of pieces){
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+
+      if(p.shape === "rect"){
+        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.w/2, 0, Math.PI*2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+
+      // lekki wiatr
+      p.vx += rand(-0.05, 0.05);
+
+      if(p.y > canvas.height + 30){
+        p.y = rand(-120, -20);
+        p.x = rand(0, canvas.width);
+      }
+    }
+  }
+
+  function loop(){
+    if(!running) return;
+    step();
+    requestAnimationFrame(loop);
+  }
+
+  // Funkcja wołana z Pythona: window.party()
+  window.party = function(){
+    make(260);
+    running = true;
+    loop();
+
+    // stop po 3.5 sekundy
+    setTimeout(() => {
+      running = false;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+    }, 3500);
+  };
+</script>
   <script type="text/python" src="main.py"></script>
 </body>
 </html>
