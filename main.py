@@ -42,16 +42,55 @@ def rects_intersect(a, b):
     return not (a[2] <= b[0] or a[0] >= b[2] or a[3] <= b[1] or a[1] >= b[3])
 
 def move_no_anywhere_avoiding_yes():
-    """Ucieka po ekranie, ale twardo zostaje w viewport i nie ląduje pod 'Tak'."""
     vw = window.innerWidth
     vh = window.innerHeight
-    edge = 20      # margines od krawędzi
-    buf = 20       # bufor wokół "Tak"
-
-    yesr = yes.getBoundingClientRect()
+    
     nor = no.getBoundingClientRect()
     no_width = nor.width
     no_height = nor.height
+    
+    # większe marginesy bezpieczeństwa
+    edge = max(30, no_width/2 + 10)
+    buf = 25
+
+    yesr = yes.getBoundingClientRect()
+
+    yes_box = {
+        "left": yesr.left - buf,
+        "top": yesr.top - buf,
+        "right": yesr.right + buf,
+        "bottom": yesr.bottom + buf,
+    }
+
+    for _ in range(100):
+        # CLAMP to safe range
+        x = random.uniform(edge, vw - edge)
+        y = random.uniform(edge, vh - edge)
+        
+        # dodatkowe clampowanie
+        x = max(no_width/2 + 10, min(x, vw - no_width/2 - 10))
+        y = max(no_height/2 + 10, min(y, vh - no_height/2 - 10))
+
+        test_box = {
+            "left": x - no_width/2,
+            "top": y - no_height/2,
+            "right": x + no_width/2,
+            "bottom": y + no_height/2,
+        }
+
+        if not (test_box["right"] <= yes_box["left"] or test_box["left"] >= yes_box["right"] or 
+                test_box["bottom"] <= yes_box["top"] or test_box["top"] >= yes_box["bottom"]):
+            continue
+
+        no.style.left = f"{x}px"
+        no.style.top = f"{y}px"
+        no.style.transform = "translate(-50%, -50%)"
+        return
+
+    # fallback
+    no.style.left = "100px"
+    no.style.top = "100px"
+    no.style.transform = "translate(-50%, -50%)"
 
     def rects_intersect_check(a, b):
         return not (a["right"] <= b["left"] or a["left"] >= b["right"] or 
@@ -125,7 +164,7 @@ def on_no(ev):
     bgm.play()
 
     no_clicks += 1
-    set_no_text()
+    set_no_text()  # text changes = size changes!
 
     scale *= 1.35
     apply_transform()
@@ -139,6 +178,8 @@ def on_no(ev):
     if no_clicks >= 3 and not hover_enabled:
         hover_enabled = True
         no.style.transition = "left 0.12s ease, top 0.12s ease"
+        # natychmiast przesuń po zmianie tekstu
+        move_no_anywhere_avoiding_yes()
 
 def on_no_hover(ev):
     if hover_enabled and not forced_under_yes:
