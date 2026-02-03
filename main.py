@@ -193,8 +193,11 @@ def put_no_under_yes():
     no.style.position = "absolute"
     no.style.left = f"{int(cx)}px"
     no.style.top = f"{int(cy)}px"
-    no.style.transform = "translate(-50%, -50%)"
-    no.style.zIndex = "10001"
+    # visually subdue and slightly smaller so overlap looks intentional
+    no.style.transform = "translate(-50%, -50%) scale(0.92)"
+    no.style.opacity = "0.28"
+    no.style.pointerEvents = "none"  # make it non-interactive in this state
+    no.style.zIndex = "10000"
     yes.style.zIndex = "10002"
 
     msg.text = "Dumna z siebie jesteś?"
@@ -262,6 +265,7 @@ def on_no(ev):
     scale *= 1.35
     apply_transform()
 
+    # Move behavior: enable after 3 clicks, and also cause a move on each subsequent click
     if no_clicks >= 7 and not forced_under_yes:
         put_no_under_yes()
         return
@@ -271,6 +275,11 @@ def on_no(ev):
         no.style.transition = "left 0.12s ease, top 0.12s ease"
         # Wait a frame for text to render, then attempt to move
         window.setTimeout(move_no_anywhere_avoiding_yes, 10)
+    else:
+        # if hover/move enabled, also make the button move each time it's clicked
+        if hover_enabled and not forced_under_yes:
+            # schedule slightly after the click completes and text scales
+            window.setTimeout(move_no_anywhere_avoiding_yes, 80)
 
 def on_yes(ev):
     bgm = document["bgm"]
@@ -320,8 +329,14 @@ def on_resize(ev=None):
 
 window.bind("resize", on_resize)
 
-# Initial placement
+# INITIAL placement: run multiple attempts (immediate + after layout) to avoid jumping
 set_no_text()
 apply_transform()
 # place mirrored once DOM is ready (allow layout)
 window.setTimeout(place_no_mirrored, 10)
+# second attempt after layout/fonts settle to avoid starting outside frame
+window.setTimeout(place_no_mirrored, 180)
+# ensure it's placed once the full window load fires
+def on_full_load(ev=None):
+    place_no_mirrored()
+window.bind("load", on_full_load)
