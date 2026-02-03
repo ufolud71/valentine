@@ -35,7 +35,7 @@
       overflow:hidden;
       color:#1b1b1b;
 
-      /* ładne tło: gradient + “bokeh” */
+      /* gradient + “bokeh” */
       background:
         radial-gradient(900px 500px at 15% 15%, rgba(255, 102, 178, 0.35), transparent 60%),
         radial-gradient(900px 500px at 85% 25%, rgba(255, 204, 102, 0.35), transparent 60%),
@@ -197,6 +197,37 @@
       font-size: 18px;
       opacity: 0.92;
     }
+
+    /* ---------- Heart particle styles ---------- */
+    /* layer sits below confetti so confetti remains on top */
+    #heart-layer{
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9998;
+      overflow: visible;
+    }
+
+    .heart {
+      position: absolute;
+      pointer-events: none;
+      transform: translate(-50%, -50%) rotate(45deg);
+      /* heart shape via clip-path + gradient */
+      width: 18px;
+      height: 18px;
+      background: linear-gradient(135deg, #ff6fb1, #ff9cc9);
+      border-radius: 50%;
+      clip-path: polygon(50% 0%, 100% 37%, 78% 100%, 50% 82%, 22% 100%, 0% 37%);
+      opacity: 0.95;
+      will-change: transform, opacity;
+    }
+
+    @keyframes heart-float {
+      0%   { transform: translate(-50%, -50%) translateY(0) scale(1) rotate(0deg); opacity: 1; }
+      40%  { opacity: 0.95; }
+      100% { transform: translate(-50%, -50%) translateY(-110px) scale(1.25) rotate(20deg); opacity: 0; }
+    }
+    /* ------------------------------------------- */
   </style>
 </head>
 
@@ -205,9 +236,12 @@
   <audio id="bgm" src="love_sosa.mp3" loop></audio>
   <div class="hearts"></div>
 
+  <!-- Heart particle layer -->
+  <div id="heart-layer" aria-hidden="true"></div>
+
   <!-- EKRAN 1: pytanie -->
   <div id="app" class="card">
-    <h2 id="q">Zostaniesz moją walentynką? 💖</h2>
+    <h2 id="q">Czy chcesz zostać moją walentynką? 💖</h2>
 
     <div class="buttons" id="buttonsArea">
       <button id="yes">Tak</button>
@@ -226,7 +260,7 @@
     <div class="final-title" id="finalTitle">JUPI! 💘</div>
 
     <div class="pics">
-      <!-- Wstaw swoje obrazki jako pliki w repo: img1.jpg i img2.jpg -->
+      <!-- Replace with your images -->
       <img id="img1" src="chujdy.jpg" alt="Zdjęcie 1" />
       <img id="img2" src="iza.jpg" alt="Zdjęcie 2" />
     </div>
@@ -235,92 +269,127 @@
   </div>
 
   <script>
-  // ===== Confetti без bibliotek =====
-  const canvas = document.getElementById("confetti");
-  const ctx = canvas.getContext("2d");
+    // ===== Confetti helper (kept as before) =====
+    const canvas = document.getElementById("confetti");
+    const ctx = canvas.getContext("2d");
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
 
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  window.addEventListener("resize", resize);
-  resize();
-
-  let pieces = [];
-  let running = false;
-
-  function rand(min, max){ return Math.random() * (max - min) + min; }
-
-  function make(count=220){
-    pieces = [];
-    for(let i=0;i<count;i++){
-      pieces.push({
-        x: rand(0, canvas.width),
-        y: rand(-canvas.height, 0),
-        w: rand(6, 12),
-        h: rand(6, 12),
-        vx: rand(-3, 3),
-        vy: rand(3, 8),
-        rot: rand(0, Math.PI * 2),
-        vr: rand(-0.2, 0.2),
-        color: `hsl(${Math.floor(rand(0,360))} 90% 60%)`,
-        shape: Math.random() < 0.5 ? "rect" : "circle"
-      });
-    }
-  }
-
-  function step(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    for(const p of pieces){
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rot);
-      ctx.fillStyle = p.color;
-
-      if(p.shape === "rect"){
-        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
-      } else {
-        ctx.beginPath();
-        ctx.arc(0, 0, p.w/2, 0, Math.PI*2);
-        ctx.fill();
-      }
-
-      ctx.restore();
-
-      p.x += p.vx;
-      p.y += p.vy;
-      p.rot += p.vr;
-
-      // lekki wiatr
-      p.vx += rand(-0.05, 0.05);
-
-      if(p.y > canvas.height + 30){
-        p.y = rand(-120, -20);
-        p.x = rand(0, canvas.width);
+    let pieces = [], running = false;
+    function rand(min, max){ return Math.random() * (max - min) + min; }
+    function make(count=220){
+      pieces = [];
+      for(let i=0;i<count;i++){
+        pieces.push({
+          x: rand(0, canvas.width),
+          y: rand(-canvas.height, 0),
+          w: rand(6, 12),
+          h: rand(6, 12),
+          vx: rand(-3, 3),
+          vy: rand(3, 8),
+          rot: rand(0, Math.PI * 2),
+          vr: rand(-0.2, 0.2),
+          color: `hsl(${Math.floor(rand(0,360))} 90% 60%)`,
+          shape: Math.random() < 0.5 ? "rect" : "circle"
+        });
       }
     }
-  }
-
-  function loop(){
-    if(!running) return;
-    step();
-    requestAnimationFrame(loop);
-  }
-
-  // Funkcja wołana z Pythona: window.party()
-  window.party = function(){
-    make(260);
-    running = true;
-    loop();
-
-    // stop po 15 sekund
-    setTimeout(() => {
-      running = false;
+    function step(){
       ctx.clearRect(0,0,canvas.width,canvas.height);
-    }, 15000);
-  };
-</script>
+      for(const p of pieces){
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        if(p.shape === "rect"){ ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+        } else { ctx.beginPath(); ctx.arc(0, 0, p.w/2, 0, Math.PI*2); ctx.fill(); }
+        ctx.restore();
+        p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+        p.vx += rand(-0.05, 0.05);
+        if(p.y > canvas.height + 30){ p.y = rand(-120, -20); p.x = rand(0, canvas.width); }
+      }
+    }
+    function loop(){ if(!running) return; step(); requestAnimationFrame(loop); }
+    window.party = function(){
+      make(260); running = true; loop();
+      setTimeout(()=>{ running = false; ctx.clearRect(0,0,canvas.width,canvas.height); }, 15000);
+    };
+    // ============================================
+
+    // ===== Heart particle system =====
+    (function(){
+      const layer = document.getElementById("heart-layer");
+      let lastSpawn = 0;
+      const SPAWN_INTERVAL = 40; // ms between pointermove spawns (throttle)
+      const MAX_HEARTS = 60;     // maximum hearts on screen at once
+
+      function spawnHeart(clientX, clientY, opts = {}) {
+        if (!layer) return;
+        // limit count
+        if (layer.children.length >= MAX_HEARTS) return;
+
+        const heart = document.createElement("div");
+        heart.className = "heart";
+
+        const size = opts.size || (8 + Math.random() * 22); // px
+        heart.style.width = `${size}px`;
+        heart.style.height = `${size}px`;
+
+        // slight color variation
+        const hue = opts.hue || (330 + (Math.random() * 40 - 20)); // pink/red range
+        heart.style.background = `linear-gradient(135deg, hsl(${hue} 95% 65%), hsl(${(hue+20)%360} 85% 75%))`;
+
+        // position
+        heart.style.left = `${clientX}px`;
+        heart.style.top = `${clientY}px`;
+
+        // animation duration and drift
+        const duration = opts.duration || (700 + Math.random() * 700); // ms
+        heart.style.animation = `heart-float ${duration}ms ease-out forwards`;
+
+        // optional slight rotation
+        const rot = (Math.random() * 40 - 20);
+        heart.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
+
+        // remove after animation ends
+        heart.addEventListener("animationend", () => { try { heart.remove(); } catch(e){} });
+        layer.appendChild(heart);
+      }
+
+      // throttle spawn on pointermove
+      function onPointerMove(e){
+        const now = performance.now();
+        if (now - lastSpawn < SPAWN_INTERVAL) return;
+        lastSpawn = now;
+        spawnHeart(e.clientX, e.clientY, { size: 8 + Math.random() * 20 });
+      }
+
+      // spawn a small burst (n hearts) at point
+      function burst(x, y, n = 6) {
+        for (let i=0; i<n; i++){
+          setTimeout(() => {
+            spawnHeart(x + (Math.random()*30 - 15), y + (Math.random()*20 - 10), { size: 10 + Math.random()*20, duration: 700 + Math.random()*800 });
+          }, Math.random()*120);
+        }
+      }
+
+      // bind events
+      window.addEventListener("pointermove", onPointerMove, { passive: true });
+      // burst on pointerdown (makes clicking feel more satisfying)
+      window.addEventListener("pointerdown", (e) => { burst(e.clientX, e.clientY, 4); }, { passive: true });
+
+      // also create a small celebratory burst when the user clicks "Tak"
+      document.addEventListener("DOMContentLoaded", () => {
+        const yes = document.getElementById("yes");
+        if (yes) yes.addEventListener("click", (e) => {
+          burst(window.innerWidth/2, window.innerHeight/2, 14);
+        });
+      });
+    })();
+    // ===== end heart system =====
+  </script>
+
   <script type="text/python" src="main.py"></script>
 </body>
 </html>
