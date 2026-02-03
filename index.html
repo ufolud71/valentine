@@ -198,8 +198,7 @@
       opacity: 0.92;
     }
 
-    /* ---------- Heart particle styles ---------- */
-    /* layer sits below confetti so confetti remains on top */
+    /* ---------- Heart particle styles (uses CSS var --rot) ---------- */
     #heart-layer{
       position: fixed;
       inset: 0;
@@ -211,8 +210,6 @@
     .heart {
       position: absolute;
       pointer-events: none;
-      transform: translate(-50%, -50%) rotate(45deg);
-      /* heart shape via clip-path + gradient */
       width: 18px;
       height: 18px;
       background: linear-gradient(135deg, #ff6fb1, #ff9cc9);
@@ -220,12 +217,14 @@
       clip-path: polygon(50% 0%, 100% 37%, 78% 100%, 50% 82%, 22% 100%, 0% 37%);
       opacity: 0.95;
       will-change: transform, opacity;
+      /* default rotation variable (can be overridden from JS) */
+      --rot: 0deg;
     }
 
     @keyframes heart-float {
-      0%   { transform: translate(-50%, -50%) translateY(0) scale(1) rotate(0deg); opacity: 1; }
+      0%   { transform: translate(-50%, -50%) translateY(0) rotate(var(--rot)) scale(1); opacity: 1; }
       40%  { opacity: 0.95; }
-      100% { transform: translate(-50%, -50%) translateY(-110px) scale(1.25) rotate(20deg); opacity: 0; }
+      100% { transform: translate(-50%, -50%) translateY(-110px) rotate(calc(var(--rot) + 20deg)) scale(1.25); opacity: 0; }
     }
     /* ------------------------------------------- */
   </style>
@@ -317,12 +316,13 @@
     };
     // ============================================
 
-    // ===== Heart particle system =====
+    // ===== Heart particle system (rotation via CSS var --rot) =====
     (function(){
       const layer = document.getElementById("heart-layer");
       let lastSpawn = 0;
       const SPAWN_INTERVAL = 40; // ms between pointermove spawns (throttle)
       const MAX_HEARTS = 60;     // maximum hearts on screen at once
+      const BASE_ROT = -45;      // base rotation so heart points the expected way
 
       function spawnHeart(clientX, clientY, opts = {}) {
         if (!layer) return;
@@ -344,13 +344,13 @@
         heart.style.left = `${clientX}px`;
         heart.style.top = `${clientY}px`;
 
+        // rotation: base + small random offset
+        const rotOffset = (Math.random() * 40 - 20); // ±20deg
+        heart.style.setProperty('--rot', `${BASE_ROT + rotOffset}deg`);
+
         // animation duration and drift
         const duration = opts.duration || (700 + Math.random() * 700); // ms
         heart.style.animation = `heart-float ${duration}ms ease-out forwards`;
-
-        // optional slight rotation
-        const rot = (Math.random() * 40 - 20);
-        heart.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
 
         // remove after animation ends
         heart.addEventListener("animationend", () => { try { heart.remove(); } catch(e){} });
