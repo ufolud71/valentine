@@ -109,11 +109,26 @@ def place_no_mirrored():
     no.style.top = f"{int(cy)}px"
     no.style.transform = "translate(-50%, -50%)"
 
-    # Reveal the button (make clickable) only after we've placed it
+    # Reveal the button and the app at once (so it doesn't pop in alone)
+    # Reveal boundary (and enable pointer events there)
+    boundary.style.visibility = "visible"
+    boundary.style.opacity = "1"
+    boundary.style.pointerEvents = "auto"
+
+    # Reveal app/card together
+    app.style.visibility = "visible"
+    app.style.opacity = "1"
+    app.style.pointerEvents = "auto"
+
+    # Also make the #no interactive now
     no.style.visibility = "visible"
     no.style.opacity = "1"
     no.style.pointerEvents = "auto"
 
+    # restore transition shortly after (so later moves animate)
+    def restore_trans():
+        no.style.transition = prev_trans or "left 0.12s ease, top 0.12s ease"
+    window.setTimeout(restore_trans, TRANSITION_RESTORE_DELAY)
     # restore transition shortly after (so later moves animate)
     def restore_trans():
         no.style.transition = prev_trans or "left 0.12s ease, top 0.12s ease"
