@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>💘 Walentynki</title>
 
-  <!-- PyScript CORE (stabilniejszy sposób) -->
-  <link rel="stylesheet" href="https://pyscript.net/releases/2025.11.1/core.css" />
-  <script type="module" src="https://pyscript.net/releases/2025.11.1/core.js"></script>
+  <!-- Brython -->
+  <script src="https://cdn.jsdelivr.net/npm/brython@3.11.3/brython.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/brython@3.11.3/brython_stdlib.js"></script>
 
   <style>
     body { font-family: Arial, sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
@@ -16,7 +16,8 @@
     #no  { font-size: 22px; padding: 12px 22px; margin: 10px; }
   </style>
 </head>
-<body>
+
+<body onload="brython()">
   <div class="card">
     <h2 id="q">Czy chcesz zostać moją walentynką? 💖</h2>
     <button id="yes">Tak</button>
@@ -24,8 +25,7 @@
     <p id="msg"></p>
   </div>
 
-  <!-- zamiast <py-script> -->
-  <script type="py" src="./main.py"></script>
+  <!-- Python działa bezpośrednio -->
+  <script type="text/python" src="main.py"></script>
 </body>
 </html>
-
