@@ -39,55 +39,65 @@ def apply_transform():
     yes.style.transform = f"translate(70px, -50%) scale({scale})"
 
 def move_no_anywhere_avoiding_yes():
-    _ = no.offsetHeight
+    # Get fresh measurements
+    vw = document.documentElement.clientWidth
+    vh = document.documentElement.clientHeight
     
-    vw = window.innerWidth
-    vh = window.innerHeight
+    # Force browser to recalculate
+    _ = no.offsetWidth
     
     nor = no.getBoundingClientRect()
     yesr = yes.getBoundingClientRect()
     
-    no_w = nor.width
-    no_h = nor.height
+    btn_w = nor.width
+    btn_h = nor.height
     
-    safe_margin = 50
-    buf = 30
+    # Huge safety margin
+    margin = 100
     
-    min_x = safe_margin + no_w/2
-    max_x = vw - safe_margin - no_w/2
-    min_y = safe_margin + no_h/2  
-    max_y = vh - safe_margin - no_h/2
+    # Calculate safe zone (where button CENTER can be)
+    safe_x_min = margin + btn_w/2
+    safe_x_max = vw - margin - btn_w/2
+    safe_y_min = margin + btn_h/2
+    safe_y_max = vh - margin - btn_h/2
     
-    if min_x >= max_x or min_y >= max_y:
-        no.style.left = "100px"
-        no.style.top = "100px"
+    # Safety check
+    if safe_x_min >= safe_x_max or safe_y_min >= safe_y_max:
+        no.style.left = "150px"
+        no.style.top = "150px"
         no.style.transform = "translate(-50%, -50%)"
         return
     
-    yes_forbidden = {
-        "l": yesr.left - buf,
-        "t": yesr.top - buf,
-        "r": yesr.right + buf,
-        "b": yesr.bottom + buf
-    }
+    # Yes button forbidden zone
+    pad = 40
+    yes_l = yesr.left - pad
+    yes_r = yesr.right + pad
+    yes_t = yesr.top - pad
+    yes_b = yesr.bottom + pad
     
-    for _ in range(200):
-        x = random.uniform(min_x, max_x)
-        y = random.uniform(min_y, max_y)
+    # Try to find valid position
+    for attempt in range(300):
+        cx = random.uniform(safe_x_min, safe_x_max)
+        cy = random.uniform(safe_y_min, safe_y_max)
         
-        l = x - no_w/2
-        r = x + no_w/2
-        t = y - no_h/2
-        b = y + no_h/2
+        # Calculate where button edges would be
+        btn_l = cx - btn_w/2
+        btn_r = cx + btn_w/2
+        btn_t = cy - btn_h/2
+        btn_b = cy + btn_h/2
         
-        if r <= yes_forbidden["l"] or l >= yes_forbidden["r"] or b <= yes_forbidden["t"] or t >= yes_forbidden["b"]:
-            no.style.left = f"{x}px"
-            no.style.top = f"{y}px"
+        # Check if overlaps with YES button
+        overlaps = not (btn_r < yes_l or btn_l > yes_r or btn_b < yes_t or btn_t > yes_b)
+        
+        if not overlaps:
+            no.style.left = f"{int(cx)}px"
+            no.style.top = f"{int(cy)}px"
             no.style.transform = "translate(-50%, -50%)"
             return
     
-    no.style.left = "100px"
-    no.style.top = "100px"
+    # Fallback: top left corner
+    no.style.left = "150px"
+    no.style.top = "150px"
     no.style.transform = "translate(-50%, -50%)"
 
 def put_no_under_yes():
@@ -103,7 +113,6 @@ def put_no_under_yes():
     no.style.left = f"{cx}px"
     no.style.top = f"{cy}px"
     no.style.transform = "translate(-50%, -50%)"
-
     no.style.zIndex = "10001"
     yes.style.zIndex = "10002"
 
@@ -129,7 +138,8 @@ def on_no(ev):
     if no_clicks >= 3 and not hover_enabled:
         hover_enabled = True
         no.style.transition = "left 0.12s ease, top 0.12s ease"
-        move_no_anywhere_avoiding_yes()
+        # Wait a frame for text to render
+        window.setTimeout(move_no_anywhere_avoiding_yes, 10)
 
 def on_no_hover(ev):
     if hover_enabled and not forced_under_yes:
