@@ -39,33 +39,32 @@ def apply_transform():
     yes.style.transform = f"translate(70px, -50%) scale({scale})"
 
 def move_no_anywhere_avoiding_yes():
-    # Ensure button uses fixed positioning context
+    # Use fixed positioning context
     no.style.position = "fixed"
 
-    # Get fresh measurements
+    # Fresh viewport and element measurements
     vw = document.documentElement.clientWidth
     vh = document.documentElement.clientHeight
 
-    # Force browser to recalculate sizes
+    # Force layout/read to get current sizes after text change
     _ = no.offsetWidth
-
     nor = no.getBoundingClientRect()
     yesr = yes.getBoundingClientRect()
 
     btn_w = nor.width
     btn_h = nor.height
 
-    # Use a smaller, viewport-proportional safety margin (so it works on small screens)
-    margin = max(12, int(vw * 0.06))
+    # Viewport-proportional padding so small screens are handled
+    padding = max(8, int(min(vw, vh) * 0.06))
 
-    # Calculate safe zone (where button CENTER can be)
-    safe_x_min = margin + btn_w / 2
-    safe_x_max = vw - margin - btn_w / 2
-    safe_y_min = margin + btn_h / 2
-    safe_y_max = vh - margin - btn_h / 2
+    # Allowed left/top edges (we treat positions as edges here)
+    allowed_left_min = padding
+    allowed_left_max = max(padding, vw - padding - btn_w)
+    allowed_top_min = padding
+    allowed_top_max = max(padding, vh - padding - btn_h)
 
-    # If there is no room, center the button as a fallback
-    if safe_x_min > safe_x_max or safe_y_min > safe_y_max:
+    # If not enough room, center the button (safe fallback)
+    if allowed_left_min > allowed_left_max or allowed_top_min > allowed_top_max:
         cx = vw / 2
         cy = vh / 2
         no.style.left = f"{int(cx)}px"
@@ -73,40 +72,44 @@ def move_no_anywhere_avoiding_yes():
         no.style.transform = "translate(-50%, -50%)"
         return
 
-    # Yes button forbidden zone (padding expands the forbidden area)
-    pad = 40
-    yes_l = yesr.left - pad
-    yes_r = yesr.right + pad
-    yes_t = yesr.top - pad
-    yes_b = yesr.bottom + pad
+    # Forbidden rectangle (yes button) expanded by a padding
+    extra_pad = max(16, int(min(vw, vh) * 0.04))
+    yes_forbid_left = yesr.left - extra_pad
+    yes_forbid_right = yesr.right + extra_pad
+    yes_forbid_top = yesr.top - extra_pad
+    yes_forbid_bottom = yesr.bottom + extra_pad
 
-    # Try to find a valid position
-    for attempt in range(500):
-        cx = random.uniform(safe_x_min, safe_x_max)
-        cy = random.uniform(safe_y_min, safe_y_max)
+    # Try many random candidates (edges), check for overlap, then clamp and place center
+    attempts = 1000
+    for _ in range(attempts):
+        left_edge = random.uniform(allowed_left_min, allowed_left_max)
+        top_edge  = random.uniform(allowed_top_min, allowed_top_max)
+        right_edge = left_edge + btn_w
+        bottom_edge = top_edge + btn_h
 
-        # Button edges based on center
-        btn_l = cx - btn_w / 2
-        btn_r = cx + btn_w / 2
-        btn_t = cy - btn_h / 2
-        btn_b = cy + btn_h / 2
+        # Check overlap between candidate rect and forbidden rect
+        no_intersect = (right_edge <= yes_forbid_left or left_edge >= yes_forbid_right or
+                        bottom_edge <= yes_forbid_top or top_edge >= yes_forbid_bottom)
 
-        # Check overlap with YES button
-        overlaps = not (btn_r <= yes_l or btn_l >= yes_r or btn_b <= yes_t or btn_t >= yes_b)
+        if no_intersect:
+            # Clamp to allowed edges as safety net
+            left_edge = max(allowed_left_min, min(left_edge, allowed_left_max))
+            top_edge  = max(allowed_top_min,  min(top_edge,  allowed_top_max))
 
-        if not overlaps:
-            # Clamp final coordinates as a safety net
-            cx = max(safe_x_min, min(cx, safe_x_max))
-            cy = max(safe_y_min, min(cy, safe_y_max))
+            # Convert to center coordinates because CSS uses translate(-50%, -50%)
+            cx = left_edge + btn_w / 2
+            cy = top_edge + btn_h / 2
 
             no.style.left = f"{int(cx)}px"
             no.style.top = f"{int(cy)}px"
             no.style.transform = "translate(-50%, -50%)"
             return
 
-    # Final fallback: put button at the nearest safe corner
-    cx = safe_x_min
-    cy = safe_y_min
+    # If nothing found, place at nearest allowed corner (top-left)
+    left_edge = allowed_left_min
+    top_edge = allowed_top_min
+    cx = left_edge + btn_w / 2
+    cy = top_edge + btn_h / 2
     no.style.left = f"{int(cx)}px"
     no.style.top = f"{int(cy)}px"
     no.style.transform = "translate(-50%, -50%)"
