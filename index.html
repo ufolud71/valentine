@@ -88,9 +88,21 @@
       margin-top: 12px;
     }
 
+    /* NEW: invisible fixed container that bounds the #no button movement */
+    #no-boundary{
+      position: fixed;
+      inset: 0;                 /* full viewport */
+      padding: 20px;           /* internal padding - button won't go into padding */
+      pointer-events: none;    /* so it doesn't block other interactions */
+      z-index: 10000;
+    }
+
+    /* #no is now absolutely positioned INSIDE the fixed boundary.
+       pointer-events:auto so the button is clickable even though the boundary is not. */
     #no{
-      position:fixed;
+      position: absolute;
       box-sizing: border-box;
+      /* initial center-ish placement inside boundary */
       left:30%;
       top:50%;
       transform: translate(-50%, -50%);
@@ -98,6 +110,7 @@
       padding: 12px 22px;
       z-index: 10001;
       cursor: pointer;
+      pointer-events: auto;
 
       /* smaller max-width to help small screens */
       max-width: min(260px, 70vw);
@@ -183,11 +196,16 @@
     <h2 id="q">Czy chcesz zostać moją walentynką? 💖</h2>
 
     <div class="buttons" id="buttonsArea">
-      <button id="no">Nie</button>
+      <!-- YES stays inside buttons -->
       <button id="yes">Tak</button>
     </div>
 
     <p id="msg"></p>
+  </div>
+
+  <!-- NEW: boundary container lives at top level and contains the #no button -->
+  <div id="no-boundary">
+    <button id="no">Nie</button>
   </div>
 
   <!-- EKRAN 2: finał -->
@@ -204,7 +222,7 @@
   </div>
 
   <script>
-  // ===== Confetti без bibliotek =====
+  // ===== Confetti без библиотек =====
   const canvas = document.getElementById("confetti");
   const ctx = canvas.getContext("2d");
 
