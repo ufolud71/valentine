@@ -6,10 +6,16 @@ no_clicks = 0
 hover_enabled = False
 forced_under_yes = False
 
+# Interaction state
+hovering = False
+hover_timeout_id = None
+pointer_down = False
+
 yes = document["yes"]
 no  = document["no"]
 msg = document["msg"]
 q   = document["q"]
+buttonsArea = document["buttonsArea"]
 
 app = document["app"]
 final = document["final"]
@@ -41,6 +47,29 @@ def set_no_text():
 def apply_transform():
     yes.style.transform = f"translate(70px, -50%) scale({scale})"
 
+# Mirror initial NO position across the center of the small buttons frame
+def place_no_mirrored():
+    # compute centers in viewport coordinates
+    brect = buttonsArea.getBoundingClientRect()
+    center_x = brect.left + brect.width / 2
+    center_y = brect.top + brect.height / 2
+
+    yesr = yes.getBoundingClientRect()
+    yes_cx = yesr.left + yesr.width / 2
+    yes_cy = yesr.top + yesr.height / 2
+
+    dx = yes_cx - center_x
+    # mirror across center: subtract dx
+    no_cx = center_x - dx
+    no_cy = yes_cy
+
+    # ensure no is positioned absolute inside the boundary
+    no.style.position = "absolute"
+    no.style.left = f"{int(no_cx)}px"
+    no.style.top = f"{int(no_cy)}px"
+    no.style.transform = "translate(-50%, -50%)"
+
+# Core placement: choose a position inside boundary avoiding YES
 def move_no_anywhere_avoiding_yes():
     # Ensure the button is absolutely positioned inside the boundary container
     no.style.position = "absolute"
@@ -133,12 +162,62 @@ def put_no_under_yes():
 
     msg.text = "Dumna z siebie jesteś?"
 
+# --- Hover/click resilience helpers ---
+
+def clear_hover_timeout():
+    global hover_timeout_id
+    if hover_timeout_id is not None:
+        try:
+            window.clearTimeout(hover_timeout_id)
+        except Exception:
+            pass
+        hover_timeout_id = None
+
+def on_no_hover(ev):
+    global hovering, hover_timeout_id
+    if not hover_enabled or forced_under_yes or pointer_down:
+        return
+    hovering = True
+    # small delay so user can move pointer to click without immediate escape
+    clear_hover_timeout()
+    hover_timeout_id = window.setTimeout(_move_if_still_hover, 140)
+
+def _move_if_still_hover():
+    global hover_timeout_id, hovering
+    hover_timeout_id = None
+    if hovering and hover_enabled and not forced_under_yes and not pointer_down:
+        move_no_anywhere_avoiding_yes()
+
+def on_no_out(ev):
+    global hovering
+    hovering = False
+    clear_hover_timeout()
+
+def on_pointer_down(ev):
+    global pointer_down
+    pointer_down = True
+    # cancel any pending hover move so it doesn't run during press
+    clear_hover_timeout()
+    # temporarily disable transition to avoid weird animation while pressing
+    no.style.transition = "none"
+
+def on_pointer_up(ev):
+    global pointer_down
+    pointer_down = False
+    # small restore delay to avoid immediate escape on quick taps
+    def restore_trans():
+        no.style.transition = "left 0.12s ease, top 0.12s ease"
+    window.setTimeout(restore_trans, 120)
+
 def on_no(ev):
     global scale, no_clicks, hover_enabled
 
     bgm = document["bgm"]
-    bgm.volume = 0.1
-    bgm.play()
+    try:
+        bgm.volume = 0.1
+        bgm.play()
+    except Exception:
+        pass
 
     no_clicks += 1
     set_no_text()
@@ -153,17 +232,16 @@ def on_no(ev):
     if no_clicks >= 3 and not hover_enabled:
         hover_enabled = True
         no.style.transition = "left 0.12s ease, top 0.12s ease"
-        # Wait a frame for text to render
+        # Wait a frame for text to render, then attempt to move
         window.setTimeout(move_no_anywhere_avoiding_yes, 10)
-
-def on_no_hover(ev):
-    if hover_enabled and not forced_under_yes:
-        move_no_anywhere_avoiding_yes()
 
 def on_yes(ev):
     bgm = document["bgm"]
-    bgm.volume = 0.1
-    bgm.play()
+    try:
+        bgm.volume = 0.1
+        bgm.play()
+    except Exception:
+        pass
 
     app.style.display = "none"
     final.style.display = "block"
@@ -173,9 +251,28 @@ def on_yes(ev):
 
     window.party()
 
+# Bind events (including pointer events so touch also works)
 no.bind("click", on_no)
 no.bind("mouseover", on_no_hover)
+no.bind("mouseout", on_no_out)
+# pointer events for both mouse and touch
+no.bind("pointerdown", on_pointer_down)
+no.bind("pointerup", on_pointer_up)
+# fallback for older devices
+no.bind("mousedown", on_pointer_down)
+no.bind("mouseup", on_pointer_up)
+
 yes.bind("click", on_yes)
 
+# Re-position NO on resize so mirrored start remains correct
+def on_resize(ev=None):
+    # If user hasn't started interaction, place mirrored; otherwise keep current behavior
+    place_no_mirrored()
+
+window.bind("resize", on_resize)
+
+# Initial placement
 set_no_text()
 apply_transform()
+# place mirrored once DOM is ready (allow layout)
+window.setTimeout(place_no_mirrored, 10)
