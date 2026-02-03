@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>💘 Walentynki</title>
+
+  <!-- PyScript -->
+  <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
+    .card { text-align:center; padding:24px; border:1px solid #ddd; border-radius:16px; width:min(520px, 92vw); }
+    #yes { font-size: 22px; padding: 12px 22px; margin: 10px; }
+    #no  { font-size: 22px; padding: 12px 22px; margin: 10px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2 id="q">Czy chcesz zostać moją walentynką? 💖</h2>
+    <button id="yes">Tak</button>
+    <button id="no">Nie</button>
+    <p id="msg"></p>
+  </div>
+
+  <py-script src="main.py"></py-script>
+</body>
+</html>
