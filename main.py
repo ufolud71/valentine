@@ -47,7 +47,8 @@ def set_no_text():
 def apply_transform():
     yes.style.transform = f"translate(70px, -50%) scale({scale})"
 
-# Mirror initial NO position across the center of the small buttons frame
+# Mirror initial NO position across the center of the small buttons frame,
+# but clamp so it never starts outside the allowed boundary.
 def place_no_mirrored():
     # compute centers in viewport coordinates
     brect = buttonsArea.getBoundingClientRect()
@@ -63,11 +64,47 @@ def place_no_mirrored():
     no_cx = center_x - dx
     no_cy = yes_cy
 
-    # ensure no is positioned absolute inside the boundary
+    # measure button size
+    _ = no.offsetWidth
+    nor = no.getBoundingClientRect()
+    btn_w = nor.width
+    btn_h = nor.height
+
+    # compute allowed area inside boundary (use same logic as movement)
+    brect_full = boundary.getBoundingClientRect()
+    padding = max(8, int(min(brect_full.width, brect_full.height) * 0.06))
+    allowed_left_min = brect_full.left + padding
+    allowed_left_max = brect_full.right - padding - btn_w
+    allowed_top_min = brect_full.top + padding
+    allowed_top_max = brect_full.bottom - padding - btn_h
+
+    # clamp center to allowed edges converted to center coordinates
+    if allowed_left_min > allowed_left_max or allowed_top_min > allowed_top_max:
+        # Not enough room -> center inside boundary
+        cx = brect_full.left + brect_full.width / 2
+        cy = brect_full.top + brect_full.height / 2
+    else:
+        # Convert allowed edges to allowed center range
+        center_x_min = allowed_left_min + btn_w / 2
+        center_x_max = allowed_left_max + btn_w / 2
+        center_y_min = allowed_top_min + btn_h / 2
+        center_y_max = allowed_top_max + btn_h / 2
+
+        cx = max(center_x_min, min(no_cx, center_x_max))
+        cy = max(center_y_min, min(no_cy, center_y_max))
+
+    # place without transition so it doesn't "move at start"
+    prev_trans = no.style.transition or ""
+    no.style.transition = "none"
     no.style.position = "absolute"
-    no.style.left = f"{int(no_cx)}px"
-    no.style.top = f"{int(no_cy)}px"
+    no.style.left = f"{int(cx)}px"
+    no.style.top = f"{int(cy)}px"
     no.style.transform = "translate(-50%, -50%)"
+
+    # restore transition shortly after (so later moves animate)
+    def restore_trans():
+        no.style.transition = prev_trans or "left 0.12s ease, top 0.12s ease"
+    window.setTimeout(restore_trans, 120)
 
 # Core placement: choose a position inside boundary avoiding YES
 def move_no_anywhere_avoiding_yes():
@@ -243,11 +280,23 @@ def on_yes(ev):
     except Exception:
         pass
 
+    # Hide main screen and show final
     app.style.display = "none"
     final.style.display = "block"
 
     finalTitle.text = "Less GOOOOO!! 💘💘💘"
     finalText.text = "To randka! Widzimy się po powrocie ❤️"
+
+    # Hide the no-boundary so the "Nie" button disappears
+    try:
+        boundary.style.display = "none"
+    except Exception:
+        # fallback: hide the button itself
+        no.style.display = "none"
+
+    # Also disable hover/movement so it won't try to run anymore
+    hover_enabled = False
+    forced_under_yes = True
 
     window.party()
 
