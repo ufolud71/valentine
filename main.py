@@ -16,6 +16,9 @@ final = document["final"]
 finalTitle = document["finalTitle"]
 finalText = document["finalText"]
 
+# The boundary element (in which #no must stay)
+boundary = document["no-boundary"]
+
 NO_TEXTS = [
     "Nie",
     "Co za harpia...",
@@ -39,14 +42,13 @@ def apply_transform():
     yes.style.transform = f"translate(70px, -50%) scale({scale})"
 
 def move_no_anywhere_avoiding_yes():
-    # Use fixed positioning context
-    no.style.position = "fixed"
+    # Ensure the button is absolutely positioned inside the boundary container
+    no.style.position = "absolute"
 
-    # Fresh viewport and element measurements
-    vw = document.documentElement.clientWidth
-    vh = document.documentElement.clientHeight
+    # Boundary rectangle (fixed, covers viewport)
+    brect = boundary.getBoundingClientRect()
 
-    # Force layout/read to get current sizes after text change
+    # Fresh element measurements after any text change
     _ = no.offsetWidth
     nor = no.getBoundingClientRect()
     yesr = yes.getBoundingClientRect()
@@ -54,49 +56,47 @@ def move_no_anywhere_avoiding_yes():
     btn_w = nor.width
     btn_h = nor.height
 
-    # Viewport-proportional padding so small screens are handled
-    padding = max(8, int(min(vw, vh) * 0.06))
+    # Padding inside boundary (viewport-proportional)
+    padding = max(8, int(min(brect.width, brect.height) * 0.06))
 
-    # Allowed left/top edges (we treat positions as edges here)
-    allowed_left_min = padding
-    allowed_left_max = max(padding, vw - padding - btn_w)
-    allowed_top_min = padding
-    allowed_top_max = max(padding, vh - padding - btn_h)
+    # Allowed left/top edges inside boundary (absolute coordinates in viewport)
+    allowed_left_min = brect.left + padding
+    allowed_left_max = brect.right - padding - btn_w
+    allowed_top_min = brect.top + padding
+    allowed_top_max = brect.bottom - padding - btn_h
 
-    # If not enough room, center the button (safe fallback)
+    # If not enough room, center inside boundary
     if allowed_left_min > allowed_left_max or allowed_top_min > allowed_top_max:
-        cx = vw / 2
-        cy = vh / 2
+        cx = brect.left + brect.width / 2
+        cy = brect.top + brect.height / 2
         no.style.left = f"{int(cx)}px"
         no.style.top = f"{int(cy)}px"
         no.style.transform = "translate(-50%, -50%)"
         return
 
-    # Forbidden rectangle (yes button) expanded by a padding
-    extra_pad = max(16, int(min(vw, vh) * 0.04))
+    # Forbidden rectangle around YES (expand slightly)
+    extra_pad = max(12, int(min(brect.width, brect.height) * 0.04))
     yes_forbid_left = yesr.left - extra_pad
     yes_forbid_right = yesr.right + extra_pad
     yes_forbid_top = yesr.top - extra_pad
     yes_forbid_bottom = yesr.bottom + extra_pad
 
-    # Try many random candidates (edges), check for overlap, then clamp and place center
-    attempts = 1000
-    for _ in range(attempts):
+    # Try many random positions
+    for _ in range(600):
         left_edge = random.uniform(allowed_left_min, allowed_left_max)
         top_edge  = random.uniform(allowed_top_min, allowed_top_max)
         right_edge = left_edge + btn_w
         bottom_edge = top_edge + btn_h
 
-        # Check overlap between candidate rect and forbidden rect
+        # Candidate does NOT intersect YES if one of the separation conditions holds
         no_intersect = (right_edge <= yes_forbid_left or left_edge >= yes_forbid_right or
                         bottom_edge <= yes_forbid_top or top_edge >= yes_forbid_bottom)
 
         if no_intersect:
-            # Clamp to allowed edges as safety net
+            # Clamp (safety) and set center coords for translate(-50%)
             left_edge = max(allowed_left_min, min(left_edge, allowed_left_max))
             top_edge  = max(allowed_top_min,  min(top_edge,  allowed_top_max))
 
-            # Convert to center coordinates because CSS uses translate(-50%, -50%)
             cx = left_edge + btn_w / 2
             cy = top_edge + btn_h / 2
 
@@ -105,7 +105,7 @@ def move_no_anywhere_avoiding_yes():
             no.style.transform = "translate(-50%, -50%)"
             return
 
-    # If nothing found, place at nearest allowed corner (top-left)
+    # Fallback: top-left allowed corner
     left_edge = allowed_left_min
     top_edge = allowed_top_min
     cx = left_edge + btn_w / 2
@@ -123,9 +123,10 @@ def put_no_under_yes():
     cx = r.left + r.width / 2
     cy = r.top + r.height / 2
 
-    no.style.position = "fixed"
-    no.style.left = f"{cx}px"
-    no.style.top = f"{cy}px"
+    # Position absolute inside boundary (boundary is fixed covering viewport)
+    no.style.position = "absolute"
+    no.style.left = f"{int(cx)}px"
+    no.style.top = f"{int(cy)}px"
     no.style.transform = "translate(-50%, -50%)"
     no.style.zIndex = "10001"
     yes.style.zIndex = "10002"
