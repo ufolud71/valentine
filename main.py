@@ -97,7 +97,7 @@ def put_no_under_yes():
     no.style.zIndex = "10001"
     yes.style.zIndex = "10002"
 
-    msg.text = "No i po zawodach 😈"
+    msg.text = "Dumna z siebie jesteś?"
 
 def on_no(ev):
     global scale, no_clicks, hover_enabled
@@ -121,7 +121,6 @@ def on_no(ev):
     # po 3 kliknięciach: włącz uciekanie na hover
     if no_clicks >= 3 and not hover_enabled:
         hover_enabled = True
-        msg.text = "Ej! On teraz ucieka 😈"
         no.style.transition = "left 0.12s ease, top 0.12s ease"
 
 def on_no_hover(ev):
