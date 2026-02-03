@@ -63,7 +63,6 @@ def on_no(ev):
     # po 3 kliknięciach aktywujemy uciekanie na hover
     if no_clicks >= 3 and not hover_enabled:
         hover_enabled = True
-        msg.text = "Ej! On teraz ucieka 😈"
         no.style.transition = "left 0.15s ease, top 0.15s ease"
 
 def on_no_hover(ev):
